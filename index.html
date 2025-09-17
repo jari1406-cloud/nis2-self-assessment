@@ -122,10 +122,10 @@ function generateReport(){
       let val=parseInt(document.querySelector(`[name=q${i}_${qi}]`).value||0);
       if(val>0){sum+=val;count++;}
     });
-    let avg=(count>0)?(sum/count).toFixed(2):"0";
-    document.getElementById("avg"+i).innerText="Keskiarvo: "+avg;
-    labels.push(t.title);
-    data.push(avg);
+    let avg = (count>0) ? (sum/count) : 0;
+document.getElementById("avg"+i).innerText="Keskiarvo: "+avg.toFixed(2);
+labels.push(t.title);
+data.push(avg);
     let sug=document.querySelector(`[name=sug${i}]`).value;
     if(sug.trim()!=""){sugList.push({topic:t.title,text:sug});}
   });
