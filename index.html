@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <title>NIS2 Itsearviointityökalu (Demo)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-2xl font-bold mb-6">NIS2 Itsearviointityökalu</h1>
+  <div id="assessment"></div>
+  <button onclick="generateReport()" class="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg">
+    Luo yhteenvetoraportti
+  </button>
+  <div class="mt-8">
+    <canvas id="resultsChart" height="100"></canvas>
+  </div>
+  <script>
+    const topics = [
+      {
+        title: "Riskienhallinta",
+        desc: "Arvioi miten organisaatio tunnistaa ja hallitsee kyberturvallisuusriskejä.",
+        questions: [
+          "Onko riskienhallintaprosessi dokumentoitu ja ajantasainen?",
+          "Seurataanko riskejä johdonmukaisesti ja raportoidaanko niistä?",
+          "Onko riskienhallinta integroitu liiketoiminnan päätöksentekoon?"
+        ]
+      },
+      {
+        title: "Poikkeamien hallinta",
+        desc: "Arvioi kyky havaita, käsitellä ja raportoida kyberturvallisuuspoikkeamat.",
+        questions: [
+          "Onko poikkeamien hallintaan selkeät toimintamallit?",
+          "Harjoitellaanko poikkeamien hallintaa säännöllisesti?",
+          "Onko poikkeamista raportointi organisaation johdolle ja viranomaisille määritelty?"
+        ]
+      },
+      {
+        title: "Toimitusketjun hallinta",
+        desc: "Arvioi miten hallitaan ulkoisten toimittajien kyberturvallisuuteen liittyvät riskit.",
+        questions: [
+          "Onko toimittajien kyberturvallisuusvaatimukset määritelty sopimuksissa?",
+          "Seurataanko toimittajien kyberturvallisuuden toteutumista?",
+          "Onko olemassa toimintasuunnitelma, jos toimittaja ei täytä vaatimuksia?"
+        ]
+      }
+    ];
+
+    function createAssessment() {
+      const container = document.getElementById("assessment");
+      topics.forEach((topic, tIndex) => {
+        let html = `
+          <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <h2 class="text-xl font-semibold mb-2">${topic.title}</h2>
+            <p class="mb-4 text-gray-700">${topic.desc}</p>
+            <table class="w-full border mb-4">
+              <thead>
+                <tr class="bg-gray-200">
+                  <th class="border p-2 text-left">Kysymys</th>
+                  <th class="border p-2 text-center">Arvio (1-5)</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        topic.questions.forEach((q, qIndex) => {
+          html += `
+            <tr>
+              <td class="border p-2">${q}</td>
+              <td class="border p-2 text-center">
+                <select onchange="updateAverage(${tIndex})" id="q-${tIndex}-${qIndex}" class="border rounded p-1">
+                  <option value="">-</option>
+                  <option value="1">1 - Heikko</option>
+                  <option value="2">2 - Kehittymässä</option>
+                  <option value="3">3 - Tyydyttävä</option>
+                  <option value="4">4 - Hyvä</option>
+                  <option value="5">5 - Erinomainen</option>
+                </select>
+              </td>
+            </tr>
+          `;
+        });
+        html += `
+              </tbody>
+            </table>
+            <p class="font-medium">Keskiarvo: <span id="avg-${tIndex}">-</span></p>
+            <div class="mt-3">
+              <label class="block font-medium">Kommentit:</label>
+              <textarea class="w-full border rounded p-2" rows="2" id="comments-${tIndex}"></textarea>
+            </div>
+            <div class="mt-3">
+              <label class="block font-medium">Suositukset:</label>
+              <textarea class="w-full border rounded p-2" rows="2" id="recommend-${tIndex}"></textarea>
+            </div>
+          </div>
+        `;
+        container.innerHTML += html;
+      });
+    }
+
+    function updateAverage(tIndex) {
+      const topic = topics[tIndex];
+      let sum = 0, count = 0;
+      topic.questions.forEach((_, qIndex) => {
+        const val = parseInt(document.getElementById(`q-${tIndex}-${qIndex}`).value);
+        if (!isNaN(val)) {
+          sum += val;
+          count++;
+        }
+      });
+      const avg = count > 0 ? (sum / count).toFixed(2) : "-";
+      document.getElementById(`avg-${tIndex}`).innerText = avg;
+    }
+
+    function generateReport() {
+      const averages = topics.map((topic, tIndex) => {
+        const avg = document.getElementById(`avg-${tIndex}`).innerText;
+        return { label: topic.title, value: avg === "-" ? 0 : parseFloat(avg) };
+      });
+
+      const ctx = document.getElementById("resultsChart").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: averages.map(a => a.label),
+          datasets: [{
+            label: "Keskiarvo",
+            data: averages.map(a => a.value),
+            backgroundColor: ["#ef4444","#f59e0b","#10b981"]
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true, max: 5 } } }
+      });
+    }
+
+    createAssessment();
+  </script>
+</body>
+</html>
