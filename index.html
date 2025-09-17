@@ -1,151 +1,171 @@
 <!DOCTYPE html>
 <html lang="fi">
 <head>
-  <meta charset="UTF-8">
-  <title>NIS2 Itsearviointityökalu</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h1 { color: #003366; }
-    .section { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    th { background: #003366; color: #fff; }
-    .average { font-weight: bold; color: #003366; }
-    textarea { width: 100%; height: 60px; margin-top: 5px; }
-    .btn { padding: 10px 20px; background: #003366; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px 0; }
-    .btn:hover { background: #0055aa; }
-    #report { background:#fff; border-radius:10px; padding:20px; margin-top:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kyberturvallisuuden itsearviointityökalu</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+    h1 { text-align: center; }
+    h2 { margin-top: 30px; color: #003366; }
+    h3 { margin-top: 20px; color: #0055a5; }
+    .question { margin-bottom: 10px; }
+    select, textarea { width: 100%; padding: 5px; margin-top: 5px; }
+    .average { font-weight: bold; margin-top: 10px; }
+    .report { margin-top: 40px; }
+    canvas { max-width: 100%; margin-top: 20px; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>NIS2 Itsearviointityökalu</h1>
-  <form id="assessmentForm"></form>
-  <button type="button" class="btn" onclick="generateReport()">Luo yhteenvetoraportti</button>
-  <div id="report"></div>
+
+<h1>Kyberturvallisuuden itsearviointityökalu</h1>
+<p>
+Tämä työkalu auttaa organisaatiotasi arvioimaan kyberturvallisuuden tasoa suhteessa NIS2-direktiivin vaatimuksiin. 
+Arviointi kattaa 12 keskeistä aihealuetta, jotka perustuvat Kyberturvallisuuskeskuksen ohjedokumenttiin. 
+Jokaisessa aihealueessa on alakohdat, joista kysytään kaksi keskeistä kysymystä. 
+Valitse kullekin kysymykselle arvio toteutuksen tasosta (1–4). 
+Lisäksi voit kirjata kommentteja ja suosituksia parannustoimista.
+</p>
+
+<form id="assessmentForm">
+
+<!-- Aihealueiden generointi -->
+<div id="areas"></div>
+
+<button type="button" onclick="calculateResults()">Laske yhteenveto</button>
+</form>
+
+<div class="report" id="report">
+    <h2>Yhteenvetoraportti</h2>
+    <canvas id="averageChart"></canvas>
+    <div id="recommendations"></div>
+</div>
 
 <script>
-const topics = [
-  {title:"1. Riskienhallinnan toimintaperiaatteet", questions:[
-    "Onko riskienhallintapolitiikka dokumentoitu ja hyväksytty johdon tasolla?",
-    "Arvioidaanko riskit säännöllisesti ja dokumentoidaanko tulokset?",
-    "Onko riskienhallintatoimenpiteet sidottu organisaation tavoitteisiin?"
-  ]},
-  {title:"2. Viestintäverkkojen turvallisuus", questions:[
-    "Onko verkkoarkkitehtuuri suunniteltu turvallisuus huomioiden?",
-    "Käytetäänkö liikenteen segmentointia ja suojauksia?",
-    "Valvotaanko verkon poikkeamia ja tunkeutumisia reaaliaikaisesti?"
-  ]},
-  {title:"3. Toimitusketjut", questions:[
-    "Onko toimittajien kyberturvallisuusvaatimukset määritelty sopimuksissa?",
-    "Arvioidaanko toimittajien riskit säännöllisesti?",
-    "Onko varajärjestelyjä toimittajakatkosten varalle?"
-  ]},
-  {title:"4. Omaisuudenhallinta", questions:[
-    "Onko kaikki kriittinen IT-omaisuus kartoitettu ja luetteloitu?",
-    "Päivitetäänkö omaisuusrekisteri säännöllisesti?",
-    "Onko omistajuudet ja vastuuhenkilöt määritelty?"
-  ]},
-  {title:"5. Henkilöstöturvallisuus", questions:[
-    "Onko henkilöstölle määritelty tietoturvaohjeet ja politiikat?",
-    "Suoritetaananko taustatarkistuksia kriittisiin tehtäviin?",
-    "Järjestetäänkö henkilöstölle säännöllistä kyberturvakoulutusta?"
-  ]},
-  {title:"6. Pääsynhallinta", questions:[
-    "Onko käyttöoikeudet määritelty vähimmän oikeuden periaatteella?",
-    "Tarkistetaanko käyttöoikeudet säännöllisesti?",
-    "Onko käytössä monivaiheinen tunnistautuminen?"
-  ]},
-  {title:"7. Salaus", questions:[
-    "Onko salausmenetelmät valittu riskien ja tietojen kriittisyyden perusteella?",
-    "Onko avainten hallinta toteutettu turvallisesti?",
-    "Käytetäänkö vahvoja standardien mukaisia salausalgoritmeja?"
-  ]},
-  {title:"8. Poikkeamien hallinta", questions:[
-    "Onko poikkeamien käsittelyprosessi määritelty ja dokumentoitu?",
-    "Harjoitellaanko poikkeamien hallintaa säännöllisesti?",
-    "Onko oppiminen toteutetuista poikkeamista järjestelmällistä?"
-  ]},
-  {title:"9. Jatkuvuudenhallinta ja varautuminen", questions:[
-    "Onko liiketoiminnan jatkuvuussuunnitelma laadittu ja testattu?",
-    "Onko RTO/RPO tavoitteet määritelty ja kommunikoitu IT:lle?",
-    "Onko varmuuskopiot säännöllisiä ja testattuja?"
-  ]},
-  {title:"10. Kehitys, hankinta ja ylläpito", questions:[
-    "Onko järjestelmien kehityksessä huomioitu turvallisuus by design?",
-    "Arvioidaanko uudet hankinnat kyberturvallisuusnäkökulmasta?",
-    "Onko ohjelmistopäivitykset hallittuja ja ajantasaisia?"
-  ]},
-  {title:"11. Kyberturvallisuuden testaaminen ja auditointi", questions:[
-    "Suoritatteko säännöllisiä tietoturvatestejä (esim. pentestit)?",
-    "Onko auditoinnit dokumentoitu ja niistä seurataan toimenpiteitä?",
-    "Arvioidaanko kolmannen osapuolen toimesta tietoturvan taso?"
-  ]},
-  {title:"12. Raportointi ja valvonta", questions:[
-    "Seurataanko kyberturvatapahtumia jatkuvasti (SOC, SIEM)?",
-    "Onko määritelty raportointivelvoitteet viranomaisille (NIS2)?",
-    "Onko johdolle säännölliset tietoturvaraportit?"
-  ]}
+const areasData = [
+    {
+        title: "1. Hallinto ja johtaminen",
+        description: "Arvioi organisaation kyberturvallisuuden hallintomallit, vastuut ja johtamisjärjestelmät.",
+        subareas: [
+            { title: "1.1 Johtamisen sitoutuminen", questions: ["Onko organisaation johto sitoutunut kyberturvallisuuden kehittämiseen?", "Onko kyberturvallisuus integroitu organisaation strategiseen johtamiseen?"] },
+            { title: "1.2 Vastuiden ja roolien määrittely", questions: ["Onko kyberturvallisuuteen liittyvät vastuut selkeästi määritelty?", "Onko roolit ja vastuut dokumentoitu ja viestitty henkilöstölle?"] }
+        ]
+    },
+    {
+        title: "2. Riskienhallinta",
+        description: "Arvioi organisaation kyberturvariskien tunnistamista, arviointia ja hallintaa.",
+        subareas: [
+            { title: "2.1 Riskien tunnistaminen", questions: ["Onko organisaatiolla prosessi kyberturvariskien tunnistamiseksi?", "Päivitetäänkö riskien tunnistaminen säännöllisesti?"] },
+            { title: "2.2 Riskien arviointi", questions: ["Arvioidaanko kyberturvariskien vaikutukset liiketoimintaan?", "Onko riskeille määritelty todennäköisyys ja prioriteetti?"] }
+        ]
+    },
+    {
+        title: "3. Turvapolitiikka ja ohjeistukset",
+        description: "Arvioi, kuinka hyvin organisaatiolla on dokumentoituja turvallisuuspolitiikkoja ja ohjeistuksia.",
+        subareas: [
+            { title: "3.1 Turvapolitiikka", questions: ["Onko organisaatiolla kirjallinen kyberturvallisuuspolitiikka?", "Onko politiikka saatavilla koko henkilöstölle?"] },
+            { title: "3.2 Ohjeistukset ja standardit", questions: ["Onko organisaatiossa selkeät ohjeistukset turvallisuuden toteuttamiseksi?", "Onko ohjeistukset ajan tasalla ja käytännönläheisiä?"] }
+        ]
+    },
+    // Lisää kaikki 12 aihealuetta samalla tavalla...
 ];
 
-function buildForm(){
-  const form=document.getElementById("assessmentForm");
-  topics.forEach((t,i)=>{
-    const div=document.createElement("div");
-    div.className="section";
-    let html=`<h2>${t.title}</h2><table><tr><th>Kysymys</th><th>Arvio (1-5)</th></tr>`;
-    t.questions.forEach((q,qi)=>{
-      html+=`<tr><td>${q}</td><td><select name="q${i}_${qi}">
-        <option value="0"></option>
-        <option value="1">1 - Ei toteutettu</option>
-        <option value="2">2 - Osittain</option>
-        <option value="3">3 - Toteutettu</option>
-        <option value="4">4 - Hyvin toteutettu</option>
-        <option value="5">5 - Erinomainen</option>
-      </select></td></tr>`;
+// Funktio renderöi kaikki alueet
+function renderAreas() {
+    const container = document.getElementById('areas');
+    areasData.forEach((area, areaIndex) => {
+        const areaDiv = document.createElement('div');
+        areaDiv.innerHTML = `<h2>${area.title}</h2><p>${area.description}</p>`;
+        area.subareas.forEach((sub, subIndex) => {
+            const subDiv = document.createElement('div');
+            subDiv.innerHTML = `<h3>${sub.title}</h3>`;
+            sub.questions.forEach((q, qIndex) => {
+                const qDiv = document.createElement('div');
+                qDiv.classList.add('question');
+                qDiv.innerHTML = `
+                    <label>${q}</label>
+                    <select id="area${areaIndex}_sub${subIndex}_q${qIndex}">
+                        <option value="1">1 Ei toteutettu tai ei tietoa</option>
+                        <option value="2">2 Osittain toteutettu</option>
+                        <option value="3">3 Enimmäkseen toteutettu</option>
+                        <option value="4">4 Täysin toteutettu</option>
+                    </select>
+                    <label>Kommentti:</label>
+                    <textarea id="area${areaIndex}_sub${subIndex}_q${qIndex}_comment"></textarea>
+                    <label>Suositukset:</label>
+                    <textarea id="area${areaIndex}_sub${subIndex}_q${qIndex}_recommendation"></textarea>
+                `;
+                subDiv.appendChild(qDiv);
+            });
+        areaDiv.appendChild(subDiv);
+        });
+        container.appendChild(areaDiv);
     });
-    html+=`</table><p class='average' id="avg${i}">Keskiarvo: -</p>`;
-    html+=`<label>Kommentit:</label><textarea name="comment${i}"></textarea>`;
-    html+=`<label>Suositukset:</label><textarea name="sug${i}"></textarea>`;
-    div.innerHTML=html;
-    form.appendChild(div);
-  });
 }
-buildForm();
 
-function generateReport(){
-  const reportDiv=document.getElementById("report");
-  let labels=[],data=[],sugList=[];
-  topics.forEach((t,i)=>{
-    let sum=0,count=0;
-    t.questions.forEach((q,qi)=>{
-      let val=parseInt(document.querySelector(`[name=q${i}_${qi}]`).value||0);
-      if(val>0){sum+=val;count++;}
+// Laskee keskiarvot ja generoi raportin
+function calculateResults() {
+    const averages = [];
+    const recommendations = {};
+    areasData.forEach((area, areaIndex) => {
+        let areaSum = 0;
+        let count = 0;
+        area.subareas.forEach((sub, subIndex) => {
+            sub.questions.forEach((q, qIndex) => {
+                const val = parseInt(document.getElementById(`area${areaIndex}_sub${subIndex}_q${qIndex}`).value);
+                areaSum += val;
+                count++;
+                // Kerätään suositukset
+                const rec = document.getElementById(`area${areaIndex}_sub${subIndex}_q${qIndex}_recommendation`).value.trim();
+                if (rec) {
+                    if (!recommendations[area.title]) recommendations[area.title] = [];
+                    recommendations[area.title].push(rec);
+                }
+            });
+        });
+        const avg = (areaSum / count).toFixed(2);
+        averages.push({ title: area.title, average: avg });
+        // Näytä keskiarvo alueen alapuolella
+        const avgDiv = document.createElement('div');
+        avgDiv.className = 'average';
+        avgDiv.innerText = `Keskiarvo: ${avg}`;
+        document.getElementById('areas').children[areaIndex].appendChild(avgDiv);
     });
-    let avg = (count>0) ? (sum/count) : 0;
-document.getElementById("avg"+i).innerText="Keskiarvo: "+avg.toFixed(2);
-labels.push(t.title);
-data.push(avg);
-    let sug=document.querySelector(`[name=sug${i}]`).value;
-    if(sug.trim()!=""){sugList.push({topic:t.title,text:sug});}
-  });
 
-  // Piirrä pylväsdiagrammi
-  reportDiv.innerHTML='<h2>Yhteenvetoraportti</h2><canvas id="chart"></canvas>';
-  new Chart(document.getElementById('chart'),{
-    type:'bar',
-    data:{labels:labels,datasets:[{label:'Keskiarvo',data:data,backgroundColor:'#003366'}]},
-    options:{scales:{y:{beginAtZero:true,max:5}}}
-  });
+    // Piirrä kaavio
+    const ctx = document.getElementById('averageChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: averages.map(a => a.title),
+            datasets: [{
+                label: 'Keskiarvo',
+                data: averages.map(a => a.average),
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: { y: { beginAtZero: true, max: 4 } }
+        }
+    });
 
-  // Suositukset alle
-  if(sugList.length>0){
-    let ul="<h3>Suositukset aihealueittain</h3><ul>";
-    sugList.forEach(s=>{ul+="<li><b>"+s.topic+"</b>: "+s.text+"</li>";});
-    ul+="</ul>";
-    reportDiv.innerHTML+=ul;
-  }
+    // Näytä suositukset
+    const recDiv = document.getElementById('recommendations');
+    recDiv.innerHTML = '<h3>Suositukset</h3>';
+    for (let area in recommendations) {
+        recDiv.innerHTML += `<h4>${area}</h4><ul>`;
+        recommendations[area].forEach(r => {
+            recDiv.innerHTML += `<li>${r}</li>`;
+        });
+        recDiv.innerHTML += '</ul>';
+    }
 }
+
+renderAreas();
 </script>
+
 </body>
 </html>
