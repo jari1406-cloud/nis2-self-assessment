@@ -2,137 +2,145 @@
 <html lang="fi">
 <head>
   <meta charset="UTF-8">
-  <title>NIS2 Itsearviointityökalu (Demo)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>NIS2 Itsearviointityökalu</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { color: #003366; }
+    .section { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #003366; color: #fff; }
+    .average { font-weight: bold; color: #003366; }
+    textarea { width: 100%; height: 60px; margin-top: 5px; }
+    .btn { padding: 10px 20px; background: #003366; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px 0; }
+    .btn:hover { background: #0055aa; }
+  </style>
 </head>
-<body class="bg-gray-100 p-6">
-  <h1 class="text-2xl font-bold mb-6">NIS2 Itsearviointityökalu</h1>
-  <div id="assessment"></div>
-  <button onclick="generateReport()" class="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg">
-    Luo yhteenvetoraportti
-  </button>
-  <div class="mt-8">
-    <canvas id="resultsChart" height="100"></canvas>
-  </div>
-  <script>
-    const topics = [
-      {
-        title: "Riskienhallinta",
-        desc: "Arvioi miten organisaatio tunnistaa ja hallitsee kyberturvallisuusriskejä.",
-        questions: [
-          "Onko riskienhallintaprosessi dokumentoitu ja ajantasainen?",
-          "Seurataanko riskejä johdonmukaisesti ja raportoidaanko niistä?",
-          "Onko riskienhallinta integroitu liiketoiminnan päätöksentekoon?"
-        ]
-      },
-      {
-        title: "Poikkeamien hallinta",
-        desc: "Arvioi kyky havaita, käsitellä ja raportoida kyberturvallisuuspoikkeamat.",
-        questions: [
-          "Onko poikkeamien hallintaan selkeät toimintamallit?",
-          "Harjoitellaanko poikkeamien hallintaa säännöllisesti?",
-          "Onko poikkeamista raportointi organisaation johdolle ja viranomaisille määritelty?"
-        ]
-      },
-      {
-        title: "Toimitusketjun hallinta",
-        desc: "Arvioi miten hallitaan ulkoisten toimittajien kyberturvallisuuteen liittyvät riskit.",
-        questions: [
-          "Onko toimittajien kyberturvallisuusvaatimukset määritelty sopimuksissa?",
-          "Seurataanko toimittajien kyberturvallisuuden toteutumista?",
-          "Onko olemassa toimintasuunnitelma, jos toimittaja ei täytä vaatimuksia?"
-        ]
-      }
-    ];
+<body>
+  <h1>NIS2 Itsearviointityökalu</h1>
+  <form id="assessmentForm"></form>
+  <button type="button" class="btn" onclick="generateReport()">Luo yhteenvetoraportti</button>
+  <div id="report"></div>
 
-    function createAssessment() {
-      const container = document.getElementById("assessment");
-      topics.forEach((topic, tIndex) => {
-        let html = `
-          <div class="bg-white p-4 rounded-lg shadow mb-6">
-            <h2 class="text-xl font-semibold mb-2">${topic.title}</h2>
-            <p class="mb-4 text-gray-700">${topic.desc}</p>
-            <table class="w-full border mb-4">
-              <thead>
-                <tr class="bg-gray-200">
-                  <th class="border p-2 text-left">Kysymys</th>
-                  <th class="border p-2 text-center">Arvio (1-5)</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-        topic.questions.forEach((q, qIndex) => {
-          html += `
-            <tr>
-              <td class="border p-2">${q}</td>
-              <td class="border p-2 text-center">
-                <select onchange="updateAverage(${tIndex})" id="q-${tIndex}-${qIndex}" class="border rounded p-1">
-                  <option value="">-</option>
-                  <option value="1">1 - Heikko</option>
-                  <option value="2">2 - Kehittymässä</option>
-                  <option value="3">3 - Tyydyttävä</option>
-                  <option value="4">4 - Hyvä</option>
-                  <option value="5">5 - Erinomainen</option>
-                </select>
-              </td>
-            </tr>
-          `;
-        });
-        html += `
-              </tbody>
-            </table>
-            <p class="font-medium">Keskiarvo: <span id="avg-${tIndex}">-</span></p>
-            <div class="mt-3">
-              <label class="block font-medium">Kommentit:</label>
-              <textarea class="w-full border rounded p-2" rows="2" id="comments-${tIndex}"></textarea>
-            </div>
-            <div class="mt-3">
-              <label class="block font-medium">Suositukset:</label>
-              <textarea class="w-full border rounded p-2" rows="2" id="recommend-${tIndex}"></textarea>
-            </div>
-          </div>
-        `;
-        container.innerHTML += html;
-      });
-    }
+<script>
+const topics = [
+  {title:"1. Riskienhallinnan toimintaperiaatteet", questions:[
+    "Onko riskienhallintapolitiikka dokumentoitu ja hyväksytty johdon tasolla?",
+    "Arvioidaanko riskit säännöllisesti ja dokumentoidaanko tulokset?",
+    "Onko riskienhallintatoimenpiteet sidottu organisaation tavoitteisiin?"
+  ]},
+  {title:"2. Viestintäverkkojen turvallisuus", questions:[
+    "Onko verkkoarkkitehtuuri suunniteltu turvallisuus huomioiden?",
+    "Käytetäänkö liikenteen segmentointia ja suojauksia?",
+    "Valvotaanko verkon poikkeamia ja tunkeutumisia reaaliaikaisesti?"
+  ]},
+  {title:"3. Toimitusketjut", questions:[
+    "Onko toimittajien kyberturvallisuusvaatimukset määritelty sopimuksissa?",
+    "Arvioidaanko toimittajien riskit säännöllisesti?",
+    "Onko varajärjestelyjä toimittajakatkosten varalle?"
+  ]},
+  {title:"4. Omaisuudenhallinta", questions:[
+    "Onko kaikki kriittinen IT-omaisuus kartoitettu ja luetteloitu?",
+    "Päivitetäänkö omaisuusrekisteri säännöllisesti?",
+    "Onko omistajuudet ja vastuuhenkilöt määritelty?"
+  ]},
+  {title:"5. Henkilöstöturvallisuus", questions:[
+    "Onko henkilöstölle määritelty tietoturvaohjeet ja politiikat?",
+    "Suoritetaananko taustatarkistuksia kriittisiin tehtäviin?",
+    "Järjestetäänkö henkilöstölle säännöllistä kyberturvakoulutusta?"
+  ]},
+  {title:"6. Pääsynhallinta", questions:[
+    "Onko käyttöoikeudet määritelty vähimmän oikeuden periaatteella?",
+    "Tarkistetaanko käyttöoikeudet säännöllisesti?",
+    "Onko käytössä monivaiheinen tunnistautuminen?"
+  ]},
+  {title:"7. Salaus", questions:[
+    "Onko salausmenetelmät valittu riskien ja tietojen kriittisyyden perusteella?",
+    "Onko avainten hallinta toteutettu turvallisesti?",
+    "Käytetäänkö vahvoja standardien mukaisia salausalgoritmeja?"
+  ]},
+  {title:"8. Poikkeamien hallinta", questions:[
+    "Onko poikkeamien käsittelyprosessi määritelty ja dokumentoitu?",
+    "Harjoitellaanko poikkeamien hallintaa säännöllisesti?",
+    "Onko oppiminen toteutetuista poikkeamista järjestelmällistä?"
+  ]},
+  {title:"9. Jatkuvuudenhallinta ja varautuminen", questions:[
+    "Onko liiketoiminnan jatkuvuussuunnitelma laadittu ja testattu?",
+    "Onko RTO/RPO tavoitteet määritelty ja kommunikoitu IT:lle?",
+    "Onko varmuuskopiot säännöllisiä ja testattuja?"
+  ]},
+  {title:"10. Kehitys, hankinta ja ylläpito", questions:[
+    "Onko järjestelmien kehityksessä huomioitu turvallisuus by design?",
+    "Arvioidaanko uudet hankinnat kyberturvallisuusnäkökulmasta?",
+    "Onko ohjelmistopäivitykset hallittuja ja ajantasaisia?"
+  ]},
+  {title:"11. Kyberturvallisuuden testaaminen ja auditointi", questions:[
+    "Suoritatteko säännöllisiä tietoturvatestejä (esim. pentestit)?",
+    "Onko auditoinnit dokumentoitu ja niistä seurataan toimenpiteitä?",
+    "Arvioidaanko kolmannen osapuolen toimesta tietoturvan taso?"
+  ]},
+  {title:"12. Raportointi ja valvonta", questions:[
+    "Seurataanko kyberturvatapahtumia jatkuvasti (SOC, SIEM)?",
+    "Onko määritelty raportointivelvoitteet viranomaisille (NIS2)?",
+    "Onko johdolle säännölliset tietoturvaraportit?"
+  ]}
+];
 
-    function updateAverage(tIndex) {
-      const topic = topics[tIndex];
-      let sum = 0, count = 0;
-      topic.questions.forEach((_, qIndex) => {
-        const val = parseInt(document.getElementById(`q-${tIndex}-${qIndex}`).value);
-        if (!isNaN(val)) {
-          sum += val;
-          count++;
-        }
-      });
-      const avg = count > 0 ? (sum / count).toFixed(2) : "-";
-      document.getElementById(`avg-${tIndex}`).innerText = avg;
-    }
+function buildForm(){
+  const form=document.getElementById("assessmentForm");
+  topics.forEach((t,i)=>{
+    const div=document.createElement("div");
+    div.className="section";
+    let html=`<h2>${t.title}</h2><table><tr><th>Kysymys</th><th>Arvio (1-5)</th></tr>`;
+    t.questions.forEach((q,qi)=>{
+      html+=`<tr><td>${q}</td><td><select name="q${i}_${qi}">
+        <option value="0"></option>
+        <option value="1">1 - Ei toteutettu</option>
+        <option value="2">2 - Osittain</option>
+        <option value="3">3 - Toteutettu</option>
+        <option value="4">4 - Hyvin toteutettu</option>
+        <option value="5">5 - Erinomainen</option>
+      </select></td></tr>`;
+    });
+    html+=`</table><p class='average' id="avg${i}">Keskiarvo: -</p>`;
+    html+=`<label>Kommentit:</label><textarea name="comment${i}"></textarea>`;
+    html+=`<label>Suositukset:</label><textarea name="sug${i}"></textarea>`;
+    div.innerHTML=html;
+    form.appendChild(div);
+  });
+}
+buildForm();
 
-    function generateReport() {
-      const averages = topics.map((topic, tIndex) => {
-        const avg = document.getElementById(`avg-${tIndex}`).innerText;
-        return { label: topic.title, value: avg === "-" ? 0 : parseFloat(avg) };
-      });
-
-      const ctx = document.getElementById("resultsChart").getContext("2d");
-      new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: averages.map(a => a.label),
-          datasets: [{
-            label: "Keskiarvo",
-            data: averages.map(a => a.value),
-            backgroundColor: ["#ef4444","#f59e0b","#10b981"]
-          }]
-        },
-        options: { scales: { y: { beginAtZero: true, max: 5 } } }
-      });
-    }
-
-    createAssessment();
-  </script>
+function generateReport(){
+  const reportDiv=document.getElementById("report");
+  let labels=[],data=[],sugList=[];
+  topics.forEach((t,i)=>{
+    let sum=0,count=0;
+    t.questions.forEach((q,qi)=>{
+      let val=parseInt(document.querySelector(`[name=q${i}_${qi}]`).value||0);
+      if(val>0){sum+=val;count++;}
+    });
+    let avg=(count>0)?(sum/count).toFixed(2):"0";
+    document.getElementById("avg"+i).innerText="Keskiarvo: "+avg;
+    labels.push(t.title);
+    data.push(avg);
+    let sug=document.querySelector(`[name=sug${i}]`).value;
+    if(sug.trim()!=""){sugList.push(t.title+": "+sug);}
+  });
+  reportDiv.innerHTML='<canvas id="chart"></canvas>';
+  new Chart(document.getElementById('chart'),{
+    type:'bar',
+    data:{labels:labels,datasets:[{label:'Keskiarvo',data:data,backgroundColor:'#003366'}]},
+    options:{scales:{y:{beginAtZero:true,max:5}}}
+  });
+  if(sugList.length>0){
+    let ul="<h3>Suositukset aihealueittain</h3><ul>";
+    sugList.forEach(s=>{ul+="<li>"+s+"</li>";});
+    ul+="</ul>";
+    reportDiv.innerHTML+=ul;
+  }
+}
+</script>
 </body>
 </html>
